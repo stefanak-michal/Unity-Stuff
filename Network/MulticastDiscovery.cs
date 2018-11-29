@@ -80,17 +80,14 @@ namespace Network
                 var data = System.Text.Encoding.UTF8.GetBytes("HELLO");
                 while (true)
                 {
-                    if (NetworkController.host)
+                    try
                     {
-                        try
-                        {
-                            client?.Send(data, data.Length, ip, port);
-                            Log("broadcast sended");
-                        }
-                        catch (Exception e)
-                        {
-                            Log(e.Message);
-                        }
+                        client?.Send(data, data.Length, ip, port);
+                        Log("broadcast sended");
+                    }
+                    catch (Exception e)
+                    {
+                        Log(e.Message);
                     }
                     Thread.Sleep(1000);
                 }
