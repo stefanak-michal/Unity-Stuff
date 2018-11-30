@@ -80,6 +80,7 @@ namespace Network
                 var data = System.Text.Encoding.UTF8.GetBytes("HELLO");
                 while (true)
                 {
+                    //You can add some condition here to broadcast only if it's needed, like app is running as server
                     try
                     {
                         client?.Send(data, data.Length, ip, port);
