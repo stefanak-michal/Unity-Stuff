@@ -1,10 +1,12 @@
 # Unity-Stuff
-Different unity scripts and functions created by me at one place
+Different unity scripts and functions created by me at one place. Readme contains description of all scripts in this repository.
 
 ***
 
 ## Network/MulticastDiscovery.cs
 UDP Multicast discovery service. Class with similar function like Unity NetworkDiscovery component, but my works with multicast, not a broadcast. It's helpful if you have more network adapters.
+
+<br>
 
 ***
 
@@ -34,10 +36,14 @@ While you are testing sharing files, use two computers. Windows not allowing ope
 
 Tested on Unity 5.5 and 2017.2. Tested only on Windows.
 
+<br>
+
 ***
 
 ## Editor/SkyboxEditor.cs
 Help utility to setup 6 Sided skybox material. You can find it in top menu Window > Skybox Editor.
+
+<br>
 
 ***
 
