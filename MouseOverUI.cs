@@ -15,6 +15,9 @@ public class MouseOverUI : MonoBehaviour
     static PointerEventData pointerEventData = new PointerEventData(EventSystem);
     static List<RaycastResult> result = new List<RaycastResult>();
 
+    /// <summary>
+    /// Returns true if mouse cursor or any finger touch is over any UI element
+    /// </summary>
     public static bool Verify
     {
         get
