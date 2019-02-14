@@ -30,15 +30,26 @@ namespace Network
         UdpClient client;
         IPEndPoint from = new IPEndPoint(0, 0);
         AndroidJavaObject multicastLock;
-        bool debug;
+        Queue<IPAddress> received = new Queue<IPAddress>();
 
         void Start()
         {
-            debug = Debug.isDebugBuild;
-
             InitializeClient();
             StartListener();
             StartBroadcaster();
+            StartCoroutine(ProcessReceived());
+        }
+
+        /// <summary>
+        /// Handle received IP addresses
+        /// </summary>
+        IEnumerator ProcessReceived()
+        {
+            while (true)
+            {
+                yield return new WaitUntil(() => received.Count > 0);
+                OnReceive?.Invoke(received.Dequeue());
+            }
         }
 
         /// <summary>
@@ -53,12 +64,12 @@ namespace Network
                     try
                     {
                         client?.Receive(ref from);
-                        OnReceive.Invoke(from.Address);
-                        Log("broadcast received " + from.Address);
+                        if (!received.Contains(from.Address))
+                            received.Enqueue(from.Address);
                     }
                     catch (Exception e)
                     {
-                        Log(e.Message);
+                        //background thread, you can't use Debug.Log
                     }
 
                     Thread.Sleep(1000);
@@ -84,11 +95,10 @@ namespace Network
                     try
                     {
                         client?.Send(data, data.Length, ip, port);
-                        Log("broadcast sended");
                     }
                     catch (Exception e)
                     {
-                        Log(e.Message);
+                        //background thread, you can't use Debug.Log
                     }
                     Thread.Sleep(1000);
                 }
@@ -104,10 +114,9 @@ namespace Network
         /// </summary>
         void InitializeClient()
         {
-            IPAddress address;
-            if (!IPAddress.TryParse(ip, out address))
+            if (!IPAddress.TryParse(ip, out IPAddress address))
             {
-                Log("Wrong IP address format");
+                Debug.LogError("Wrong IP address format");
                 return;
             }
 
@@ -117,8 +126,6 @@ namespace Network
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Client.Bind(new IPEndPoint(IPAddress.Any, port));
             client.JoinMulticastGroup(address);
-
-            Log("UDP client initialized");
         }
 
         /// <summary>
@@ -133,22 +140,6 @@ namespace Network
         }
 
         /// <summary>
-        /// Platform dependant log
-        /// </summary>
-        /// <param name="msg"></param>
-        void Log(string msg)
-        {
-            if (debug)
-            {
-#if UNITY_ANDROID
-                Console.WriteLine(msg);
-#elif UNITY_EDITOR
-                Debug.Log(msg);
-#endif
-            }
-        }
-
-        /// <summary>
         /// If you have problems with multicast lock on android, this method can help you
         /// </summary>
         void MulticastLock()
@@ -159,9 +150,7 @@ namespace Network
                 {
                     multicastLock = wifiManager.Call<AndroidJavaObject>("createMulticastLock", "lock");
                     multicastLock.Call("acquire");
-                    Log("multicast lock acquired");
                 }
-
             }
         }
     }
