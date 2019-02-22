@@ -24,20 +24,31 @@ namespace Network
         /// </summary>
         public string ip = "239.255.255.250";
         public int port;
+        public bool log;
         public ReceiveEvent OnReceive;
 
-        Thread broadcaster, listener;
-        UdpClient client;
-        IPEndPoint from = new IPEndPoint(0, 0);
         AndroidJavaObject multicastLock;
         Queue<IPAddress> received = new Queue<IPAddress>();
+        List<UdpClient> clients = new List<UdpClient>();
 
         void Start()
         {
-            InitializeClient();
-            StartListener();
-            StartBroadcaster();
+            InitializeClients();
             StartCoroutine(ProcessReceived());
+
+            if (Debug.isDebugBuild && log)
+                StartCoroutine(ProcessErrors());
+        }
+
+        Queue<string> errors = new Queue<string>();
+
+        IEnumerator ProcessErrors()
+        {
+            while (true)
+            {
+                yield return new WaitUntil(() => errors.Count > 0);
+                Debug.Log(errors.Dequeue());
+            }
         }
 
         /// <summary>
@@ -53,79 +64,84 @@ namespace Network
         }
 
         /// <summary>
-        /// Listen to messages
+        /// Create UDP clients
         /// </summary>
-        void StartListener()
+        void InitializeClients()
         {
-            (listener = new Thread(() =>
-            {
-                while (true)
-                {
-                    try
-                    {
-                        client?.Receive(ref from);
-                        if (!received.Contains(from.Address))
-                            received.Enqueue(from.Address);
-                    }
-                    catch (Exception e)
-                    {
-                        //background thread, you can't use Debug.Log
-                    }
-
-                    Thread.Sleep(1000);
-                }
-            })
-            {
-                IsBackground = true,
-                Priority = System.Threading.ThreadPriority.BelowNormal
-            }).Start();
-        }
-
-        /// <summary>
-        /// Broadcast message over network
-        /// </summary>
-        void StartBroadcaster()
-        {
-            (broadcaster = new Thread(() =>
-            {
-                var data = System.Text.Encoding.UTF8.GetBytes("HELLO");
-                while (true)
-                {
-                    //You can add some condition here to broadcast only if it's needed, like app is running as server
-                    try
-                    {
-                        client?.Send(data, data.Length, ip, port);
-                    }
-                    catch (Exception e)
-                    {
-                        //background thread, you can't use Debug.Log
-                    }
-                    Thread.Sleep(1000);
-                }
-            })
-            {
-                IsBackground = true,
-                Priority = System.Threading.ThreadPriority.BelowNormal
-            }).Start();
-        }
-
-        /// <summary>
-        /// Create UDP client
-        /// </summary>
-        void InitializeClient()
-        {
-            if (!IPAddress.TryParse(ip, out IPAddress address))
+            if (!IPAddress.TryParse(ip, out IPAddress destination))
             {
                 Debug.LogError("Wrong IP address format");
                 return;
             }
 
-            client = new UdpClient();
-            client.ExclusiveAddressUse = false;
-            client.MulticastLoopback = false;
-            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            client.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-            client.JoinMulticastGroup(address);
+            foreach (IPAddress local in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
+            {
+                if (local.AddressFamily != AddressFamily.InterNetwork)
+                    continue;
+
+                var client = new UdpClient(AddressFamily.InterNetwork);
+                client.ExclusiveAddressUse = false;
+                client.MulticastLoopback = false;
+                client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                client.Client.Bind(new IPEndPoint(local, port));
+                client.JoinMulticastGroup(destination, local);
+                clients.Add(client);
+
+                new Thread(() =>
+                {
+                    IPEndPoint from = new IPEndPoint(IPAddress.Any, port);
+
+                    while (true)
+                    {
+                        try
+                        {
+                            client.Receive(ref from);
+                            if (!received.Contains(from.Address))
+                            {
+                                received.Enqueue(from.Address);
+                                errors.Enqueue("Received " + from.Address);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            errors.Enqueue("Error receiving " + e.Message);
+                            //background thread, you can't use Debug.Log
+                        }
+
+                        Thread.Sleep(1000);
+                    }
+                })
+                {
+                    IsBackground = true,
+                    Priority = System.Threading.ThreadPriority.BelowNormal
+                }.Start();
+
+                new Thread(() =>
+                {
+                    var data = System.Text.Encoding.UTF8.GetBytes("HELLO");
+                    while (true)
+                    {
+                        //You can add some condition here to broadcast only if it's needed, like app is running as server
+                        //{
+                            try
+                            {
+                                client.Send(data, data.Length, ip, port);
+                                errors.Enqueue("Sended");
+                            }
+                            catch (Exception e)
+                            {
+                                errors.Enqueue("Error sending " + e.Message);
+                                //background thread, you can't use Debug.Log
+                            }
+                        //}
+                        Thread.Sleep(1000);
+                    }
+                })
+                {
+                    IsBackground = true,
+                    Priority = System.Threading.ThreadPriority.BelowNormal
+                }.Start();
+            }
         }
 
         /// <summary>
@@ -133,9 +149,9 @@ namespace Network
         /// </summary>
         private void OnDestroy()
         {
-            client?.Close();
-            broadcaster?.Abort();
-            listener?.Abort();
+            foreach (UdpClient client in clients)
+                client.Close();
+
             multicastLock?.Call("release");
         }
 
