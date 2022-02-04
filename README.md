@@ -102,4 +102,4 @@ Verify if mouse cursor or any finger touch is over any UI element. It's importan
 
 If you find something useful here, something what helps you, please support me and buy me a tea :)
 
-[![Donate paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.me/MichalStefanak)
+https://ko-fi.com/michalstefanak
