@@ -100,6 +100,12 @@ Verify if mouse cursor or any finger touch is over any UI element. It's importan
 
 <br>
 
-If you find something useful here, something what helps you, please support me and buy me a tea :)
+## GyroControl.cs
+Script to move camera with gyro sensor (usually at mobile device). Device can have 3 different sensors to recognize rotation and not all are always installed. This script uses most used installed sensor (usually if device support auto display rotation it has this sensor).
 
-https://ko-fi.com/michalstefanak
+<br>
+
+## Thanks and support
+
+<a href='https://ko-fi.com/Z8Z5ABMLW' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://cdn.ko-fi.com/cdn/kofi1.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+
